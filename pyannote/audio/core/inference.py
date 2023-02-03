@@ -195,13 +195,18 @@ class Inference(BaseInference):
             try:
                 outputs = self.model(chunks.to(self.device))
             except RuntimeError as exception:
-                if is_oom_error(exception):
-                    raise MemoryError(
-                        f"batch_size ({self.batch_size: d}) is probably too large. "
-                        f"Try with a smaller value until memory error disappears."
-                    )
+                try:
+                    oomerror = is_oom_error(exception)
+                except Exception as e:
+                    raise e
                 else:
-                    raise exception
+                    if oomerror:
+                        raise MemoryError(
+                            f"batch_size ({self.batch_size: d}) is probably too large. "
+                            f"Try with a smaller value until memory error disappears."
+                        )
+                    else:
+                        raise exception
 
         # convert powerset to multi-label unless specifically requested not to
         if self.model.specifications.powerset and not self.skip_conversion:
